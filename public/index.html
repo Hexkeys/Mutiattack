@@ -1,63 +1,15 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Mutiattack Multiplayer</title>
-  <style>
-    body{margin:0;font-family:system-ui,sans-serif;background:#0b1020;color:#eef2ff}
-    main{max-width:1000px;margin:auto;padding:20px} .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-    input,button{padding:10px;border-radius:8px;border:1px solid #334155;background:#111827;color:#fff}
-    button{cursor:pointer;background:#2563eb;border:0}.status{padding:10px;background:#111827;border-radius:8px}
-    canvas{width:100%;background:#111827;border:1px solid #334155;border-radius:12px;touch-action:none}
-  </style>
-</head>
-<body>
-<main>
-  <h1>Mutiattack</h1>
-  <div class="bar">
-    <input id="name" placeholder="Player name" value="Player">
-    <input id="room" placeholder="Room" value="lobby">
-    <button id="join">Join room</button>
-    <button id="wave">Start wave</button>
-    <button id="tower">Place tower</button>
-  </div>
-  <div class="status" id="status">Disconnected</div>
-  <canvas id="game" width="900" height="500"></canvas>
-  <p>Move with WASD/arrow keys. Click the battlefield to place a tower after selecting “Place tower”. Everyone in the room sees the same server state.</p>
-</main>
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket=io(), canvas=document.querySelector("#game"), ctx=canvas.getContext("2d");
-let game={players:[],towers:[],enemies:[],wave:1,gold:100,started:false}, placing=false;
-const status=document.querySelector("#status");
-socket.on("connect",()=>status.textContent="Connected — join a room");
-socket.on("joined",({roomId})=>status.textContent="Joined room: "+roomId);
-socket.on("state",s=>{game=s;draw();status.textContent=`Players: ${s.players.length} • Wave: ${s.wave} • Shared gold: ${s.gold}`;});
-document.querySelector("#join").onclick=()=>socket.emit("joinRoom",{roomId:document.querySelector("#room").value,name:document.querySelector("#name").value});
-document.querySelector("#wave").onclick=()=>socket.emit("startWave");
-document.querySelector("#tower").onclick=()=>{placing=true;status.textContent="Click the battlefield to place a tower (25 gold)";};
-canvas.onclick=e=>{
-  if(!placing)return;
-  const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width,y=(e.clientY-r.top)*canvas.height/r.height;
-  socket.emit("placeTower",{x,y}); placing=false;
-};
-const keys=new Set();
-addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
-addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
-setInterval(()=>{
-  const me=game.players.find(p=>p.id===socket.id); if(!me)return;
-  let dx=0,dy=0;if(keys.has("a")||keys.has("arrowleft"))dx-=4;if(keys.has("d")||keys.has("arrowright"))dx+=4;if(keys.has("w")||keys.has("arrowup"))dy-=4;if(keys.has("s")||keys.has("arrowdown"))dy+=4;
-  if(dx||dy)socket.emit("playerMove",{x:Math.max(0,Math.min(900,me.x+dx)),y:Math.max(0,Math.min(500,me.y+dy))});
-},50);
-function draw(){
-  ctx.clearRect(0,0,900,500);
-  ctx.strokeStyle="#334155"; for(let x=0;x<900;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke()} for(let y=0;y<500;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(900,y);ctx.stroke()}
-  for(const e of game.enemies){ctx.fillStyle="#ef4444";ctx.beginPath();ctx.arc(e.x,e.y,12,0,Math.PI*2);ctx.fill();}
-  for(const t of game.towers){ctx.fillStyle="#22c55e";ctx.fillRect(t.x-14,t.y-14,28,28);}
-  for(const p of game.players){ctx.fillStyle="#60a5fa";ctx.beginPath();ctx.arc(p.x||40,p.y||40,14,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.font="12px sans-serif";ctx.fillText(p.name,(p.x||40)+18,p.y||40);}
-}
-draw();
-</script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Mutiattack — Multiplayer 2D Shooter</title>
+<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,sans-serif;background:#080b14;color:#fff}body{display:flex;flex-direction:column}.top{height:58px;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#111827;z-index:2}h1{font-size:18px;margin:0 12px 0 0}input,button{border:0;border-radius:8px;padding:9px 11px;background:#1f2937;color:#fff}button{background:#2563eb;font-weight:700}#status{font-size:13px;margin-left:auto}.wrap{position:relative;flex:1;min-height:0}canvas{width:100%;height:100%;display:block;background:#0d1420;touch-action:none}#leftStick,#rightStick{position:absolute;bottom:28px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.2);touch-action:none;display:none}#leftStick{left:28px}#rightStick{right:28px}.knob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px;border-radius:50%;background:rgba(96,165,250,.65);border:2px solid rgba(255,255,255,.7)}#rightStick .knob{background:rgba(248,113,113,.7)}.hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:7px 12px;border-radius:999px;background:rgba(0,0,0,.45);font-size:12px;pointer-events:none}@media(pointer:coarse){#leftStick,#rightStick{display:block}.top{height:52px}.top input{width:90px}.top h1{display:none}.hint{top:auto;bottom:8px}}</style></head><body>
+<div class="top"><h1>Mutiattack</h1><input id="name" placeholder="Name" value="Player"><input id="room" placeholder="Room" value="lobby"><button id="join">Join</button><span id="status">Connecting…</span></div>
+<div class="wrap"><canvas id="game"></canvas><div class="hint">Left joystick: move • Right joystick: aim & shoot</div><div id="leftStick"><div class="knob"></div></div><div id="rightStick"><div class="knob"></div></div></div>
+<script src="/socket.io/socket.io.js"></script><script>
+const socket=io(),canvas=document.querySelector("#game"),ctx=canvas.getContext("2d"),statusEl=document.querySelector("#status"),left=document.querySelector("#leftStick"),right=document.querySelector("#rightStick");
+let game={players:[],bullets:[]},meId=null,lastShot=0,keys=new Set(),moveStick={x:0,y:0},aimStick={x:0,y:0};
+function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=(innerHeight-58)*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}addEventListener("resize",resize);resize();
+socket.on("connect",()=>statusEl.textContent="Online");socket.on("joined",d=>{meId=d.id;statusEl.textContent="Room: "+d.roomId});socket.on("state",s=>{game=s;draw()});
+document.querySelector("#join").onclick=()=>socket.emit("joinRoom",{roomId:document.querySelector("#room").value||"lobby",name:document.querySelector("#name").value||"Player"});
+addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+function stick(el,type){let active=false;function set(e){const p=e.touches?e.touches[0]:e,r=el.getBoundingClientRect();let x=p.clientX-(r.left+r.width/2),y=p.clientY-(r.top+r.height/2),d=Math.hypot(x,y);if(d>55){x=x/d*55;y=y/d*55}el.querySelector(".knob").style.transform=`translate(${x}px,${y}px)`;if(type==="move")moveStick={x:x/55,y:y/55};else aimStick={x:x/55,y:y/55}}function end(){active=false;el.querySelector(".knob").style.transform="";if(type==="move")moveStick={x:0,y:0};else aimStick={x:0,y:0}}el.addEventListener("touchstart",e=>{active=true;set(e);e.preventDefault()},{passive:false});el.addEventListener("touchmove",e=>{if(active){set(e);e.preventDefault()}},{passive:false});el.addEventListener("touchend",end)}stick(left,"move");stick(right,"aim");
+function loop(t){const p=game.players.find(p=>p.id===meId);if(p){let dx=moveStick.x,dy=moveStick.y;if(keys.has("a")||keys.has("arrowleft"))dx-=1;if(keys.has("d")||keys.has("arrowright"))dx+=1;if(keys.has("w")||keys.has("arrowup"))dy-=1;if(keys.has("s")||keys.has("arrowdown"))dy+=1;const len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len}let angle=p.angle;if(Math.hypot(aimStick.x,aimStick.y)>.15){angle=Math.atan2(aimStick.y,aimStick.x);if(t-lastShot>120){socket.emit("shoot",{angle});lastShot=t}}if((keys.has(" ")||keys.has("enter"))&&t-lastShot>180){socket.emit("shoot",{angle});lastShot=t}if(dx||dy||angle!==p.angle)socket.emit("playerMove",{x:p.x+dx*6,y:p.y+dy*6,angle})}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+function draw(){const w=innerWidth,h=innerHeight-58;ctx.clearRect(0,0,w,h);ctx.strokeStyle="rgba(255,255,255,.06)";for(let x=0;x<w;x+=48){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}for(const b of game.bullets){ctx.fillStyle="#facc15";ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill()}for(const p of game.players){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);ctx.fillStyle=p.id===meId?"#60a5fa":"#c084fc";ctx.beginPath();ctx.arc(0,0,16,0,Math.PI*2);ctx.fill();ctx.fillStyle="#f8fafc";ctx.fillRect(8,-4,20,8);ctx.restore();ctx.fillStyle="#fff";ctx.font="12px system-ui";ctx.textAlign="center";ctx.fillText(p.name,p.x,p.y-24);ctx.fillStyle="#22c55e";ctx.fillRect(p.x-20,p.y+20,40*(p.hp/100),4)}}draw();
+</script></body></html>
