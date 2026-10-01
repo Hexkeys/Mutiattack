@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mutiattack Multiplayer</title>
+  <style>
+    body{margin:0;font-family:system-ui,sans-serif;background:#0b1020;color:#eef2ff}
+    main{max-width:1000px;margin:auto;padding:20px} .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    input,button{padding:10px;border-radius:8px;border:1px solid #334155;background:#111827;color:#fff}
+    button{cursor:pointer;background:#2563eb;border:0}.status{padding:10px;background:#111827;border-radius:8px}
+    canvas{width:100%;background:#111827;border:1px solid #334155;border-radius:12px;touch-action:none}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Mutiattack</h1>
+  <div class="bar">
+    <input id="name" placeholder="Player name" value="Player">
+    <input id="room" placeholder="Room" value="lobby">
+    <button id="join">Join room</button>
+    <button id="wave">Start wave</button>
+    <button id="tower">Place tower</button>
+  </div>
+  <div class="status" id="status">Disconnected</div>
+  <canvas id="game" width="900" height="500"></canvas>
+  <p>Move with WASD/arrow keys. Click the battlefield to place a tower after selecting “Place tower”. Everyone in the room sees the same server state.</p>
+</main>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io(), canvas=document.querySelector("#game"), ctx=canvas.getContext("2d");
+let game={players:[],towers:[],enemies:[],wave:1,gold:100,started:false}, placing=false;
+const status=document.querySelector("#status");
+socket.on("connect",()=>status.textContent="Connected — join a room");
+socket.on("joined",({roomId})=>status.textContent="Joined room: "+roomId);
+socket.on("state",s=>{game=s;draw();status.textContent=`Players: ${s.players.length} • Wave: ${s.wave} • Shared gold: ${s.gold}`;});
+document.querySelector("#join").onclick=()=>socket.emit("joinRoom",{roomId:document.querySelector("#room").value,name:document.querySelector("#name").value});
+document.querySelector("#wave").onclick=()=>socket.emit("startWave");
+document.querySelector("#tower").onclick=()=>{placing=true;status.textContent="Click the battlefield to place a tower (25 gold)";};
+canvas.onclick=e=>{
+  if(!placing)return;
+  const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*canvas.width/r.width,y=(e.clientY-r.top)*canvas.height/r.height;
+  socket.emit("placeTower",{x,y}); placing=false;
+};
+const keys=new Set();
+addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
+addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+setInterval(()=>{
+  const me=game.players.find(p=>p.id===socket.id); if(!me)return;
+  let dx=0,dy=0;if(keys.has("a")||keys.has("arrowleft"))dx-=4;if(keys.has("d")||keys.has("arrowright"))dx+=4;if(keys.has("w")||keys.has("arrowup"))dy-=4;if(keys.has("s")||keys.has("arrowdown"))dy+=4;
+  if(dx||dy)socket.emit("playerMove",{x:Math.max(0,Math.min(900,me.x+dx)),y:Math.max(0,Math.min(500,me.y+dy))});
+},50);
+function draw(){
+  ctx.clearRect(0,0,900,500);
+  ctx.strokeStyle="#334155"; for(let x=0;x<900;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke()} for(let y=0;y<500;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(900,y);ctx.stroke()}
+  for(const e of game.enemies){ctx.fillStyle="#ef4444";ctx.beginPath();ctx.arc(e.x,e.y,12,0,Math.PI*2);ctx.fill();}
+  for(const t of game.towers){ctx.fillStyle="#22c55e";ctx.fillRect(t.x-14,t.y-14,28,28);}
+  for(const p of game.players){ctx.fillStyle="#60a5fa";ctx.beginPath();ctx.arc(p.x||40,p.y||40,14,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.font="12px sans-serif";ctx.fillText(p.name,(p.x||40)+18,p.y||40);}
+}
+draw();
+</script>
+</body>
+</html>
