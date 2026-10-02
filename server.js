@@ -24,6 +24,10 @@ const spawn=()=>{for(let i=0;i<100;i++){const x=40+Math.random()*1120,y=40+Math.
 const makeRoom=()=>({players:new Map(),bullets:new Map()});
 const snapshot=r=>({players:[...r.players.values()].map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,angle:p.angle,hp:p.hp,gun:p.gun})),bullets:[...r.bullets.values()].map(b=>({id:b.id,x:b.x,y:b.y,color:b.color}))});
 function broadcast(id){const r=rooms.get(id);if(r)io.to(id).emit("state",{...snapshot(r),obstacles});}
+
+app.get("/",(_req,res)=>res.sendFile("index.html",{root:"public"}));
+app.get("/health",(_req,res)=>res.status(200).send("ok"));
+
 io.on("connection",socket=>{
  socket.on("joinRoom",({roomId="lobby",name="Player",gun="pistol"}={})=>{
   if(socket.data.roomId)socket.leave(socket.data.roomId);roomId=String(roomId).trim().slice(0,24)||"lobby";
