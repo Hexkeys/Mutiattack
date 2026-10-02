@@ -6,8 +6,8 @@ import { Server } from "socket.io";
 const app=express(),server=http.createServer(app);
 const io=new Server(server,{cors:{origin:"*"},perMessageDeflate:false});
 const PORT=process.env.PORT||10000;
-const WORLD={w:1200,h:700};
-const INTEREST_RADIUS=720;
+const WORLD={w:2400,h:1400};
+const INTEREST_RADIUS=1000;
 const obstacles=[
 {x:250,y:130,w:180,h:55},{x:720,y:120,w:210,h:55},{x:500,y:300,w:200,h:60},
 {x:160,y:500,w:220,h:55},{x:820,y:490,w:220,h:55}
@@ -21,7 +21,7 @@ rifle:{damage:34,fireRate:360,speed:900,spread:.015,pellets:1,color:"#f87171"}
 const rooms=new Map(),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const circleHitsRect=(x,y,r,o)=>x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h;
 const blocked=(x,y,r=16)=>obstacles.some(o=>circleHitsRect(x,y,r,o));
-const spawn=()=>{for(let i=0;i<100;i++){const x=40+Math.random()*1120,y=40+Math.random()*620;if(!blocked(x,y))return{x,y}}return{x:60,y:60}};
+const spawn=()=>{for(let i=0;i<100;i++){const x=40+Math.random()*(WORLD.w-80),y=40+Math.random()*(WORLD.h-80);if(!blocked(x,y))return{x,y}}return{x:60,y:60}};
 const makeRoom=()=>({players:new Map(),bullets:new Map()});
 
 function sendState(socket,r,me){
@@ -36,7 +36,7 @@ function sendState(socket,r,me){
    const x=clamp(p.x,o.x,o.x+o.w),y=clamp(p.y,o.y,o.y+o.h);
    return (x-p.x)**2+(y-p.y)**2<=rr;
  });
- socket.volatile.emit("state",{players,bullets,obstacles:nearbyObstacles});
+ socket.volatile.emit("state",{players,bullets,obstacles:nearbyObstacles,world:WORLD});
 }
 function broadcast(id){
  const r=rooms.get(id);
@@ -83,8 +83,8 @@ io.on("connection",socket=>{
   if(!r.players.size)rooms.delete(id);else broadcast(id);
  });
 });
-setInterval(()=>{
- const dt=1/20;
+let tick=0;setInterval(()=>{
+ const dt=1/60;
  for(const[id,r]of rooms){
   for(const p of r.players.values()){
    if(p.hp<=0)continue;
@@ -105,7 +105,7 @@ setInterval(()=>{
    }
    if(hit)continue;
   }
-  broadcast(id);
+  tick++;if(tick%3===0)broadcast(id);
  }
-},50);
+},1000/60);
 server.listen(PORT,()=>console.log("Mutiattack server listening on "+PORT));
