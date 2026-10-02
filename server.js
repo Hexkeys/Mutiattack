@@ -9,8 +9,10 @@ const PORT=process.env.PORT||10000;
 const WORLD={w:2400,h:1400};
 const INTEREST_RADIUS=1000;
 const obstacles=[
-{x:250,y:130,w:180,h:55},{x:720,y:120,w:210,h:55},{x:500,y:300,w:200,h:60},
-{x:160,y:500,w:220,h:55},{x:820,y:490,w:220,h:55}
+{x:250,y:130,w:180,h:55},{x:720,y:120,w:210,h:55},{x:1180,y:150,w:240,h:60},{x:1710,y:120,w:190,h:55},{x:2040,y:300,w:180,h:60},
+{x:500,y:300,w:200,h:60},{x:980,y:360,w:180,h:55},{x:1480,y:340,w:220,h:60},{x:190,y:760,w:220,h:55},{x:650,y:700,w:190,h:60},
+{x:1080,y:760,w:250,h:55},{x:1540,y:690,w:180,h:60},{x:1970,y:760,w:220,h:55},{x:380,y:1080,w:210,h:60},{x:900,y:1030,w:180,h:55},
+{x:1300,y:1080,w:220,h:60},{x:1740,y:1030,w:200,h:55},{x:2100,y:1080,w:170,h:60},{x:160,y:500,w:220,h:55},{x:820,y:490,w:220,h:55}
 ];
 const guns={
 pistol:{damage:25,fireRate:220,speed:680,spread:0,pellets:1,color:"#facc15"},
@@ -22,7 +24,7 @@ const rooms=new Map(),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const circleHitsRect=(x,y,r,o)=>x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h;
 const blocked=(x,y,r=16)=>obstacles.some(o=>circleHitsRect(x,y,r,o));
 const spawn=()=>{for(let i=0;i<100;i++){const x=40+Math.random()*(WORLD.w-80),y=40+Math.random()*(WORLD.h-80);if(!blocked(x,y))return{x,y}}return{x:60,y:60}};
-const makeRoom=()=>({players:new Map(),bullets:new Map()});
+const makeRoom=()=>({players:new Map(),bullets:new Map(),stateTimer:0});
 
 function sendState(socket,r,me){
  const p=r.players.get(me);
@@ -83,14 +85,21 @@ io.on("connection",socket=>{
   if(!r.players.size)rooms.delete(id);else broadcast(id);
  });
 });
-let tick=0;setInterval(()=>{
- const dt=1/60;
+
+let lastTime=performance.now();
+const tickServer=()=>{
+ const now=performance.now();
+ const dt=Math.min((now-lastTime)/1000,.05);
+ lastTime=now;
+
  for(const[id,r]of rooms){
   for(const p of r.players.values()){
    if(p.hp<=0)continue;
    const speed=300,nx=clamp(p.x+p.input.x*speed*dt,18,WORLD.w-18),ny=clamp(p.y+p.input.y*speed*dt,18,WORLD.h-18);
-   if(!blocked(nx,p.y))p.x=nx;if(!blocked(p.x,ny))p.y=ny;
+   if(!blocked(nx,p.y))p.x=nx;
+   if(!blocked(p.x,ny))p.y=ny;
   }
+
   for(const[k,b]of r.bullets){
    b.x+=b.vx*dt;b.y+=b.vy*dt;b.life+=dt;
    if(b.life>1.5||b.x<0||b.x>WORLD.w||b.y<0||b.y>WORLD.h||obstacles.some(o=>circleHitsRect(b.x,b.y,4,o))){r.bullets.delete(k);continue}
@@ -105,7 +114,14 @@ let tick=0;setInterval(()=>{
    }
    if(hit)continue;
   }
-  tick++;if(tick%3===0)broadcast(id);
+
+  r.stateTimer+=dt;
+  if(r.stateTimer>=.05){
+   r.stateTimer-=.05;
+   broadcast(id);
+  }
  }
-},1000/60);
+};
+setInterval(tickServer,8);
+
 server.listen(PORT,()=>console.log("Mutiattack server listening on "+PORT));
