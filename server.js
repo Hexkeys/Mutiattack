@@ -57,7 +57,12 @@ app.get("/health",(_req,res)=>res.status(200).send("ok"));
 
 io.on("connection",socket=>{
  socket.on("joinRoom",({roomId="lobby",name="Player",gun="pistol",kit="striker"}={})=>{
-  if(socket.data.roomId)socket.leave(socket.data.roomId);
+  if(socket.data.roomId){
+   const oldRoomId=socket.data.roomId,oldRoom=rooms.get(oldRoomId),oldPlayer=oldRoom?.players.get(socket.id);
+   oldRoom?.players.delete(socket.id);
+   if(oldRoom){for(const[k,b]of oldRoom.bullets)if(b.owner===socket.id)oldRoom.bullets.delete(k);if(!oldRoom.players.size)rooms.delete(oldRoomId);else broadcast(oldRoomId)}
+   socket.leave(oldRoomId);
+  }
   const roomName=String(roomId).trim().slice(0,24)||"lobby";
   if(!rooms.has(roomName))rooms.set(roomName,makeRoom());
   const r=rooms.get(roomName),pos=spawn();socket.join(roomName);socket.data.roomId=roomName;
@@ -98,13 +103,13 @@ const tickServer=()=>{
    }
    if(b.life>2.2||b.x<0||b.x>WORLD.w||b.y<0||b.y>WORLD.h){r.bullets.delete(k);continue}
    let hit=false;
-   for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){const streak=STREAKS[p.streak]||null;p.hp=Math.max(0,p.hp-(b.damage*(KITS[p.kit]?.damage||1)*(streak?.bonus||1)));if(p.hp===0){const victim=p.name,killerPlayer=r.players.get(b.owner),killer=killerPlayer?.name;
+   for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){const attacker=r.players.get(b.owner),streak=STREAKS[attacker?.streak]||null;const damage=b.damage*(KITS[attacker?.kit]?.damage||1)*(streak?.bonus||1);p.hp=Math.max(0,p.hp-damage);if(p.hp===0){const victim=p.name,killerPlayer=r.players.get(b.owner),killer=killerPlayer?.name;
 if(killerPlayer&&killerPlayer.id!==p.id){killerPlayer.streak=(killerPlayer.streak||0)+1;announce(id,killer+" eliminated "+victim+" • "+killerPlayer.streak+" kill streak","death");const milestone=STREAKS[killerPlayer.streak];if(milestone)announce(id,killer+" is "+milestone.label+"!","power");}
 else{announce(id,victim+" died","death");}
 setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn();q.x=pos.x;q.y=pos.y;q.hp=q.maxHp;q.powerUntil=0;q.streak=0;announce(id,q.name+" respawned","respawn")}},700)}}r.bullets.delete(k);hit=true;break}}
    if(hit)continue;
   }
-  for(const p of r.players.values()){if(p.hp<=0||p.powerUntil>now)continue;for(const[k,u]of r.powerups){if(Math.hypot(p.x-u.x,p.y-u.y)<28){p.powerUntil=now+POWERUP_DURATION*1000;r.powerups.delete(k);announce(id,p.name+" got the Phase Power-Up","power");break}}}
+  for(const p of r.players.values()){if(p.hp<=0||p.powerUntil>now)continue;for(const[k,u]of r.powerups){if(Math.hypot(p.x-u.x,p.y-u.y)<28){p.powerUntil=now+POWERUP_DURATION*1000;r.powerups.delete(k);r.powerTimer=POWERUP_RESPAWN;announce(id,p.name+" got the Phase Power-Up","power");break}}}
   r.powerTimer-=dt;if(r.powerTimer<=0&&r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});r.powerTimer=POWERUP_RESPAWN}
   r.stateTimer+=dt;if(r.stateTimer>=.05){r.stateTimer-=.05;broadcast(id)}
  }
