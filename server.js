@@ -17,10 +17,10 @@ const obstacles=[
 {x:1300,y:1080,w:220,h:60},{x:1740,y:1030,w:200,h:55},{x:2100,y:1080,w:170,h:60},{x:160,y:500,w:220,h:55},{x:820,y:490,w:220,h:55}
 ];
 const guns={
-pistol:{damage:25,fireRate:220,speed:680,spread:0,pellets:1,color:"#facc15"},
-smg:{damage:10,fireRate:75,speed:720,spread:.08,pellets:1,color:"#60a5fa"},
-shotgun:{damage:12,fireRate:520,speed:650,spread:.24,pellets:6,color:"#fb923c"},
-rifle:{damage:34,fireRate:360,speed:900,spread:.015,pellets:1,color:"#f87171"}
+pistol:{damage:25,fireRate:220,speed:680,spread:0,pellets:1,color:"#facc15",penetration:1,wallDamage:0.7},
+smg:{damage:10,fireRate:75,speed:720,spread:.08,pellets:1,color:"#60a5fa",penetration:0,wallDamage:1},
+shotgun:{damage:12,fireRate:520,speed:650,spread:.24,pellets:6,color:"#fb923c",penetration:0,wallDamage:1},
+rifle:{damage:34,fireRate:360,speed:900,spread:.015,pellets:1,color:"#f87171",penetration:3,wallDamage:0.75}
 };
 const rooms=new Map(),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const circleHitsRect=(x,y,r,o)=>x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h;
@@ -48,13 +48,13 @@ app.get("/health",(_req,res)=>res.status(200).send("ok"));
 io.on("connection",socket=>{
  socket.on("joinRoom",({roomId="lobby",name="Player",gun="pistol"}={})=>{
   if(socket.data.roomId)socket.leave(socket.data.roomId);
-  roomId=String(roomId).trim().slice(0,24)||"lobby";
-  if(!rooms.has(roomId))rooms.set(roomId,makeRoom());
-  const r=rooms.get(roomId),pos=spawn();socket.join(roomId);socket.data.roomId=roomId;
+  const roomName=String(roomId).trim().slice(0,24)||"lobby";
+  if(!rooms.has(roomName))rooms.set(roomName,makeRoom());
+  const r=rooms.get(roomName),pos=spawn();socket.join(roomName);socket.data.roomId=roomName;
   const selected=guns[gun]?gun:"pistol";
   r.players.set(socket.id,{id:socket.id,name:String(name).slice(0,20)||"Player",x:pos.x,y:pos.y,angle:0,hp:100,gun:selected,input:{x:0,y:0},lastShot:0,powerUntil:0});
   if(r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});}
-  socket.emit("joined",{roomId,id:socket.id});broadcast(roomId);
+  socket.emit("joined",{roomId:roomName,id:socket.id});broadcast(roomName);
  });
  socket.on("selectGun",({gun}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(p&&guns[gun])p.gun=gun});
  socket.on("playerInput",({x=0,y=0,angle=0}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;p.input.x=clamp(Number(x)||0,-1,1);p.input.y=clamp(Number(y)||0,-1,1);if(Number.isFinite(angle))p.angle=angle});
@@ -62,7 +62,7 @@ io.on("connection",socket=>{
   const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!r||!p||p.hp<=0||!Number.isFinite(angle))return;
   const g=guns[p.gun],now=Date.now();if(now-p.lastShot<g.fireRate)return;p.lastShot=now;
   const empowered=p.powerUntil>performance.now();
-  for(let i=0;i<g.pellets;i++){const a=angle+(Math.random()-.5)*g.spread,vx=Math.cos(a)*g.speed,vy=Math.sin(a)*g.speed,id=randomUUID();r.bullets.set(id,{id,owner:socket.id,x:p.x+Math.cos(a)*20,y:p.y+Math.sin(a)*20,vx,vy,life:0,damage:g.damage,color:empowered?"#a78bfa":g.color,bounce:empowered?3:0})}
+  for(let i=0;i<g.pellets;i++){const a=angle+(Math.random()-.5)*g.spread,vx=Math.cos(a)*g.speed,vy=Math.sin(a)*g.speed,id=randomUUID();r.bullets.set(id,{id,owner:socket.id,x:p.x+Math.cos(a)*20,y:p.y+Math.sin(a)*20,vx,vy,life:0,damage:g.damage,color:empowered?"#a78bfa":g.color,bounce:empowered?3:0,penetration:empowered?0:g.penetration,wallDamage:g.wallDamage})}
  });
  socket.on("disconnect",()=>{
   const id=socket.data.roomId,r=rooms.get(id);if(!r)return;r.players.delete(socket.id);
@@ -79,7 +79,11 @@ const tickServer=()=>{
   for(const[k,b]of r.bullets){
    const oldX=b.x,oldY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life+=dt;
    const hitWall=obstacles.find(o=>circleHitsRect(b.x,b.y,4,o));
-   if(hitWall&&b.bounce>0){b.x=oldX;b.y=oldY;const ld=Math.abs(oldX-hitWall.x),rd=Math.abs(oldX-(hitWall.x+hitWall.w)),td=Math.abs(oldY-hitWall.y),bd=Math.abs(oldY-(hitWall.y+hitWall.h));if(Math.min(ld,rd)<Math.min(td,bd))b.vx*=-1;else b.vy*=-1;b.bounce--;b.x+=b.vx*dt;b.y+=b.vy*dt}
+   if(hitWall&&b.bounce>0){b.x=oldX;b.y=oldY;const ld=Math.abs(oldX-hitWall.x),rd=Math.abs(oldX-(hitWall.x+hitWall.w)),td=Math.abs(oldY-hitWall.y),bd=Math.abs(oldY-(hitWall.y+hitWall.h));if(Math.min(ld,rd)<Math.min(td,bd))b.vx*=-1;else b.vy*=-1;b.bounce--;b.x+=b.vx*dt}
+   else if(hitWall){
+    if(b.penetration>0){b.penetration--;b.damage*=b.wallDamage;b.x+=b.vx*dt;b.y+=b.vy*dt}
+    else{r.bullets.delete(k);continue}
+   }
    if(b.life>2.2||b.x<0||b.x>WORLD.w||b.y<0||b.y>WORLD.h){r.bullets.delete(k);continue}
    let hit=false;
    for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){p.hp=Math.max(0,p.hp-b.damage);if(p.hp===0)setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn();q.x=pos.x;q.y=pos.y;q.hp=100;q.powerUntil=0}},700)}r.bullets.delete(k);hit=true;break}}
