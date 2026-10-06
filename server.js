@@ -10,6 +10,12 @@ const WORLD={w:2400,h:1400};
 const INTEREST_RADIUS=1000;
 const POWERUP_DURATION=10;
 const POWERUP_RESPAWN=15;
+const KITS={
+  striker:{hp:100,speed:320,damage:1.08,label:"Striker"},
+  tank:{hp:125,speed:270,damage:.96,label:"Tank"},
+  scout:{hp:85,speed:350,damage:1,label:"Scout"}
+};
+const STREAKS={3:{label:"ON FIRE",bonus:1.06},5:{label:"RAMPAGE",bonus:1.12},8:{label:"UNSTOPPABLE",bonus:1.18}};
 const obstacles=[
 {x:250,y:130,w:180,h:55},{x:720,y:120,w:210,h:55},{x:1180,y:150,w:240,h:60},{x:1710,y:120,w:190,h:55},{x:2040,y:300,w:180,h:60},
 {x:500,y:300,w:200,h:60},{x:980,y:360,w:180,h:55},{x:1480,y:340,w:220,h:60},{x:190,y:760,w:220,h:55},{x:650,y:700,w:190,h:60},
@@ -34,7 +40,7 @@ function sendState(socket,r,me){
  const p=r.players.get(me);if(!p)return;
  const rr=INTEREST_RADIUS*INTEREST_RADIUS,now=performance.now();
  const players=[...r.players.values()].filter(q=>q.id===me||((q.x-p.x)**2+(q.y-p.y)**2)<=rr)
-  .map(q=>({id:q.id,name:q.name,x:q.x,y:q.y,angle:q.angle,hp:q.hp,gun:q.gun,invisible:q.powerUntil>now,powerMs:Math.max(0,q.powerUntil-now)}));
+  .map(q=>({id:q.id,name:q.name,x:q.x,y:q.y,angle:q.angle,hp:q.hp,maxHp:q.maxHp,gun:q.gun,kit:q.kit,streak:q.streak,invisible:q.powerUntil>now,powerMs:Math.max(0,q.powerUntil-now)}));
  const bullets=[...r.bullets.values()].filter(b=>((b.x-p.x)**2+(b.y-p.y)**2)<=rr)
   .map(b=>({id:b.id,x:b.x,y:b.y,color:b.color,bounce:b.bounce}));
  const nearbyObstacles=obstacles.filter(o=>{const x=clamp(p.x,o.x,o.x+o.w),y=clamp(p.y,o.y,o.y+o.h);return (x-p.x)**2+(y-p.y)**2<=rr});
@@ -47,17 +53,18 @@ app.get("/",(_req,res)=>res.sendFile("index.html",{root:"public"}));
 app.get("/health",(_req,res)=>res.status(200).send("ok"));
 
 io.on("connection",socket=>{
- socket.on("joinRoom",({roomId="lobby",name="Player",gun="pistol"}={})=>{
+ socket.on("joinRoom",({roomId="lobby",name="Player",gun="pistol",kit="striker"}={})=>{
   if(socket.data.roomId)socket.leave(socket.data.roomId);
   const roomName=String(roomId).trim().slice(0,24)||"lobby";
   if(!rooms.has(roomName))rooms.set(roomName,makeRoom());
   const r=rooms.get(roomName),pos=spawn();socket.join(roomName);socket.data.roomId=roomName;
-  const selected=guns[gun]?gun:"pistol";
-  r.players.set(socket.id,{id:socket.id,name:String(name).slice(0,20)||"Player",x:pos.x,y:pos.y,angle:0,hp:100,gun:selected,input:{x:0,y:0},lastShot:0,powerUntil:0});
+  const selected=guns[gun]?gun:"pistol",selectedKit=KITS[kit]?kit:"striker",k=KITS[selectedKit];
+  r.players.set(socket.id,{id:socket.id,name:String(name).slice(0,20)||"Player",x:pos.x,y:pos.y,angle:0,hp:k.hp,maxHp:k.hp,gun:selected,kit:selectedKit,streak:0,input:{x:0,y:0},lastShot:0,powerUntil:0});
   if(r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});}
   socket.emit("joined",{roomId:roomName,id:socket.id});announce(roomName,(String(name).slice(0,20)||"Player")+" joined the game","join");broadcast(roomName);
  });
  socket.on("selectGun",({gun}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(p&&guns[gun])p.gun=gun});
+ socket.on("selectKit",({kit}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(p&&KITS[kit]){p.kit=kit;p.maxHp=KITS[kit].hp;p.hp=Math.min(p.hp,p.maxHp)}});
  socket.on("playerInput",({x=0,y=0,angle=0}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;p.input.x=clamp(Number(x)||0,-1,1);p.input.y=clamp(Number(y)||0,-1,1);if(Number.isFinite(angle))p.angle=angle});
  socket.on("shoot",({angle=0}={})=>{
   const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!r||!p||p.hp<=0||!Number.isFinite(angle))return;
@@ -65,6 +72,7 @@ io.on("connection",socket=>{
   const empowered=p.powerUntil>performance.now();
   for(let i=0;i<g.pellets;i++){const a=angle+(Math.random()-.5)*g.spread,vx=Math.cos(a)*g.speed,vy=Math.sin(a)*g.speed,id=randomUUID();r.bullets.set(id,{id,owner:socket.id,x:p.x+Math.cos(a)*20,y:p.y+Math.sin(a)*20,vx,vy,life:0,damage:g.damage,color:empowered?"#a78bfa":g.color,bounce:empowered?3:0,penetration:empowered?0:g.penetration,wallDamage:g.wallDamage})}
  });
+ socket.on("pingCheck",cb=>{if(typeof cb==="function")cb()});
  socket.on("disconnect",()=>{
   const id=socket.data.roomId,r=rooms.get(id);if(!r)return;const leaving=r.players.get(socket.id);r.players.delete(socket.id);if(leaving)announce(id,leaving.name+" left the game","leave");
   for(const[k,b]of r.bullets)if(b.owner===socket.id)r.bullets.delete(k);
@@ -76,7 +84,7 @@ let lastTime=performance.now();
 const tickServer=()=>{
  const now=performance.now(),dt=Math.min((now-lastTime)/1000,.05);lastTime=now;
  for(const[id,r]of rooms){
-  for(const p of r.players.values()){if(p.hp<=0)continue;const speed=300,nx=clamp(p.x+p.input.x*speed*dt,18,WORLD.w-18),ny=clamp(p.y+p.input.y*speed*dt,18,WORLD.h-18);if(!blocked(nx,p.y))p.x=nx;if(!blocked(p.x,ny))p.y=ny}
+  for(const p of r.players.values()){if(p.hp<=0)continue;const speed=KITS[p.kit]?.speed||300,nx=clamp(p.x+p.input.x*speed*dt,18,WORLD.w-18),ny=clamp(p.y+p.input.y*speed*dt,18,WORLD.h-18);if(!blocked(nx,p.y))p.x=nx;if(!blocked(p.x,ny))p.y=ny}
   for(const[k,b]of r.bullets){
    const oldX=b.x,oldY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life+=dt;
    const hitWall=obstacles.find(o=>circleHitsRect(b.x,b.y,4,o));
@@ -87,7 +95,10 @@ const tickServer=()=>{
    }
    if(b.life>2.2||b.x<0||b.x>WORLD.w||b.y<0||b.y>WORLD.h){r.bullets.delete(k);continue}
    let hit=false;
-   for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){p.hp=Math.max(0,p.hp-b.damage);if(p.hp===0){const victim=p.name,killer=r.players.get(b.owner)?.name;announce(id,killer&&killer!==victim?killer+" eliminated "+victim:victim+" died","death");setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn();q.x=pos.x;q.y=pos.y;q.hp=100;q.powerUntil=0;announce(id,q.name+" respawned","respawn")}},700)}}r.bullets.delete(k);hit=true;break}}
+   for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){const streak=STREAKS[p.streak]||null;p.hp=Math.max(0,p.hp-(b.damage*(KITS[p.kit]?.damage||1)*(streak?.bonus||1)));if(p.hp===0){const victim=p.name,killerPlayer=r.players.get(b.owner),killer=killerPlayer?.name;
+if(killerPlayer&&killerPlayer.id!==p.id){killerPlayer.streak=(killerPlayer.streak||0)+1;announce(id,killer+" eliminated "+victim+" • "+killerPlayer.streak+" kill streak","death");const milestone=STREAKS[killerPlayer.streak];if(milestone)announce(id,killer+" is "+milestone.label+"!","power");}
+else{announce(id,victim+" died","death");}
+setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn();q.x=pos.x;q.y=pos.y;q.hp=q.maxHp;q.powerUntil=0;q.streak=0;announce(id,q.name+" respawned","respawn")}},700)}}r.bullets.delete(k);hit=true;break}}
    if(hit)continue;
   }
   for(const p of r.players.values()){if(p.hp<=0||p.powerUntil>now)continue;for(const[k,u]of r.powerups){if(Math.hypot(p.x-u.x,p.y-u.y)<28){p.powerUntil=now+POWERUP_DURATION*1000;r.powerups.delete(k);announce(id,p.name+" got the Phase Power-Up","power");break}}}
