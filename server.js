@@ -13,7 +13,10 @@ const POWERUP_RESPAWN=15;
 const KITS={
   striker:{hp:100,speed:320,damage:1.08,label:"Striker"},
   tank:{hp:125,speed:270,damage:.96,label:"Tank"},
-  scout:{hp:85,speed:350,damage:1,label:"Scout"}
+  scout:{hp:85,speed:350,damage:1,label:"Scout"},
+  juggernaut:{hp:145,speed:250,damage:.9,label:"Juggernaut"},
+  assassin:{hp:75,speed:380,damage:1.12,label:"Assassin"},
+  ranger:{hp:95,speed:300,damage:1.08,label:"Ranger"}
 };
 const STREAKS={3:{label:"ON FIRE",bonus:1.06},5:{label:"RAMPAGE",bonus:1.12},8:{label:"UNSTOPPABLE",bonus:1.18}};
 const obstacles=[
@@ -63,8 +66,8 @@ io.on("connection",socket=>{
   if(r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});}
   socket.emit("joined",{roomId:roomName,id:socket.id});announce(roomName,(String(name).slice(0,20)||"Player")+" joined the game","join");broadcast(roomName);
  });
- socket.on("selectGun",({gun}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(p&&guns[gun])p.gun=gun});
- socket.on("selectKit",({kit}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(p&&KITS[kit]){p.kit=kit;p.maxHp=KITS[kit].hp;p.hp=Math.min(p.hp,p.maxHp)}});
+ // Kit and gun are locked for the whole match. They can only be chosen when joining.
+
  socket.on("playerInput",({x=0,y=0,angle=0}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;p.input.x=clamp(Number(x)||0,-1,1);p.input.y=clamp(Number(y)||0,-1,1);if(Number.isFinite(angle))p.angle=angle});
  socket.on("shoot",({angle=0}={})=>{
   const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!r||!p||p.hp<=0||!Number.isFinite(angle))return;
