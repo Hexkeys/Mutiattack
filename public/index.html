@@ -22,7 +22,7 @@ setInterval(()=>{const p=game.players.find(p=>p.id===meId);if(!p)return;let dx=m
 function frame(now){
  const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;const follow=1-Math.exp(-14*dt),w=viewW,h=viewH,p=renderPlayers.get(meId);
  if(p){camera.x+=(p.rx-camera.x)*follow;camera.y+=(p.ry-camera.y)*follow}
- const powerLeft=p&&p.invisible?Math.max(0,10):0;powerhud.style.display=powerLeft?"block":"none";if(powerLeft)powerhud.textContent="PHASE POWER: active";
+ const powerLeft=p&&p.powerMs?Math.max(0,p.powerMs/1000):0;powerhud.style.display=powerLeft?"block":"none";if(powerLeft)powerhud.textContent="PHASE POWER: "+powerLeft.toFixed(1)+"s";
  ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2-camera.x,h/2-camera.y);
  const world=game.world||{w:2400,h:1400},leftX=camera.x-w/2-60,rightX=camera.x+w/2+60,topY=camera.y-h/2-60,bottomY=camera.y+h/2+60;
  ctx.fillStyle="#0a101b";ctx.fillRect(0,0,world.w,world.h);ctx.strokeStyle="#64748b";ctx.lineWidth=10;ctx.strokeRect(0,0,world.w,world.h);ctx.strokeStyle="rgba(96,165,250,.35)";ctx.lineWidth=3;ctx.strokeRect(5,5,world.w-10,world.h-10);
