@@ -70,7 +70,7 @@ io.on("connection",socket=>{
   const selected=guns[gun]?gun:"pistol",selectedKit=KITS[kit]?kit:"striker",k=KITS[selectedKit];
   r.players.set(socket.id,{id:socket.id,name:String(name).slice(0,20)||"Player",x:pos.x,y:pos.y,angle:0,hp:k.hp,maxHp:k.hp,gun:selected,kit:selectedKit,streak:0,input:{x:0,y:0},lastShot:0,powerUntil:0});
   if(r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});}
-  socket.emit("joined",{roomId:roomName,id:socket.id});announce(roomName,(String(name).slice(0,20)||"Player")+" joined the game","join");broadcast(roomName);
+  socket.emit("joined",{roomId:roomName,id:socket.id,x:pos.x,y:pos.y,gun:selected,kit:selectedKit,maxHp:k.hp});announce(roomName,(String(name).slice(0,20)||"Player")+" joined the game","join");broadcast(roomName);
  });
  // Kit and gun are locked for the whole match. They can only be chosen when joining.
 
