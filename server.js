@@ -53,7 +53,8 @@ function sendState(socket,r,me){
 function broadcast(id){const r=rooms.get(id);if(!r)return;for(const p of r.players.values()){const socket=io.sockets.sockets.get(p.id);if(socket)sendState(socket,r,p.id)}}
 
 app.get("/",(_req,res)=>res.sendFile("index.html",{root:"public"}));
-app.get("/health",(_req,res)=>res.status(200).send("ok"));
+app.get("/health",(_req,res)=>res.status(200).type("text/plain").send("ok"));
+app.get("/ready",(_req,res)=>res.status(200).json({ok:true,service:"mutiattack"}));
 
 io.on("connection",socket=>{
  socket.on("joinRoom",({roomId="lobby",name="Player",gun="pistol",kit="striker"}={})=>{
@@ -115,4 +116,4 @@ setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn()
  }
 };
 setInterval(tickServer,8);
-server.listen(PORT,()=>console.log("Mutiattack server listening on "+PORT));
+server.listen(PORT,"0.0.0.0",()=>console.log("Mutiattack server listening on "+PORT));
