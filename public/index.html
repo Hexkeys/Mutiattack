@@ -34,10 +34,18 @@ function frame(now){
  const p=renderPlayers.get(meId),powerLeft=p&&p.powerMs?Math.max(0,p.powerMs/1000):0;powerhud.style.display=powerLeft?"block":"none";if(powerLeft)powerhud.textContent="PHASE POWER: "+powerLeft.toFixed(1)+"s";
  ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2-camera.x,h/2-camera.y);
  const world=game.world||{w:2400,h:1400},leftX=camera.x-w/2-60,rightX=camera.x+w/2+60,topY=camera.y-h/2-60,bottomY=camera.y+h/2+60;
- ctx.fillStyle="#0a101b";ctx.fillRect(0,0,world.w,world.h);ctx.strokeStyle="#64748b";ctx.lineWidth=10;ctx.strokeRect(0,0,world.w,world.h);ctx.strokeStyle="rgba(96,165,250,.35)";ctx.lineWidth=3;ctx.strokeRect(5,5,world.w-10,world.h-10);ctx.strokeStyle="rgba(255,255,255,.06)";ctx.beginPath();for(let x=Math.floor(leftX/48)*48;x<=rightX;x+=48){ctx.moveTo(x,topY);ctx.lineTo(x,bottomY)}for(let y=Math.floor(topY/48)*48;y<=bottomY;y+=48){ctx.moveTo(leftX,y);ctx.lineTo(rightX,y)}ctx.stroke();
- for(const o of game.obstacles){if(o.x+o.w<leftX||o.x>rightX||o.y+o.h<topY||o.y>bottomY)continue;ctx.fillStyle="#334155";ctx.fillRect(o.x,o.y,o.w,o.h);ctx.strokeStyle="#64748b";ctx.strokeRect(o.x,o.y,o.w,o.h)}
+ ctx.fillStyle="#0a101b";ctx.fillRect(0,0,world.w,world.h);
+ // 2.5D ground: subtle perspective bands and highlights
+ ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle="#334155";ctx.lineWidth=2;for(let y=Math.floor(topY/96)*96;y<=bottomY;y+=96){ctx.beginPath();ctx.moveTo(leftX,y);ctx.lineTo(rightX,y);ctx.stroke()}ctx.globalAlpha=1;ctx.restore();
+ ctx.strokeStyle="#64748b";ctx.lineWidth=10;ctx.strokeRect(0,0,world.w,world.h);ctx.strokeStyle="rgba(96,165,250,.35)";ctx.lineWidth=3;ctx.strokeRect(5,5,world.w-10,world.h-10);ctx.strokeStyle="rgba(255,255,255,.06)";ctx.beginPath();for(let x=Math.floor(leftX/48)*48;x<=rightX;x+=48){ctx.moveTo(x,topY);ctx.lineTo(x,bottomY)}for(let y=Math.floor(topY/48)*48;y<=bottomY;y+=48){ctx.moveTo(leftX,y);ctx.lineTo(rightX,y)}ctx.stroke();
+ for(const o of game.obstacles){if(o.x+o.w<leftX||o.x>rightX||o.y+o.h<topY||o.y>bottomY)continue;// raised obstacle with a small 3D side face
+ ctx.fillStyle="rgba(0,0,0,.28)";ctx.fillRect(o.x+8,o.y+10,o.w,o.h);
+ ctx.fillStyle="#475569";ctx.fillRect(o.x,o.y,o.w,o.h);
+ ctx.fillStyle="#64748b";ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.x+o.w,o.y);ctx.lineTo(o.x+o.w,o.y-9);ctx.lineTo(o.x,o.y-9);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#1e293b";ctx.beginPath();ctx.moveTo(o.x+o.w,o.y);ctx.lineTo(o.x+o.w,o.y+o.h);ctx.lineTo(o.x+o.w+8,o.y+o.h+10);ctx.lineTo(o.x+o.w+8,o.y+10);ctx.closePath();ctx.fill();
+ ctx.strokeStyle="#64748b";ctx.strokeRect(o.x,o.y,o.w,o.h)}
  for(const u of game.powerups||[]){if(u.x<leftX||u.x>rightX||u.y<topY||u.y>bottomY)continue;ctx.save();ctx.translate(u.x,u.y);ctx.rotate(now/500);ctx.fillStyle="#a78bfa";ctx.shadowColor="#c084fc";ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(12,0);ctx.lineTo(0,14);ctx.lineTo(-12,0);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.fillStyle="#fff";ctx.font="bold 9px system-ui";ctx.textAlign="center";ctx.fillText("10",0,3);ctx.restore()}
- for(const b of game.bullets){if(b.x<leftX||b.x>rightX||b.y<topY||b.y>bottomY)continue;ctx.fillStyle=b.bounce>0?"#c084fc":(b.color||"#facc15");ctx.beginPath();ctx.arc(b.x,b.y,b.bounce>0?5:4,0,Math.PI*2);ctx.fill()}
+ for(const b of game.bullets){if(b.x<leftX||b.x>rightX||b.y<topY||b.y>bottomY)continue;ctx.fillStyle="rgba(0,0,0,.25)";ctx.beginPath();ctx.ellipse(b.x+3,b.y+5,b.bounce>0?6:5,3,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=b.bounce>0?"#c084fc":(b.color||"#facc15");ctx.beginPath();ctx.arc(b.x,b.y-2,b.bounce>0?5:4,0,Math.PI*2);ctx.fill()}
  const me=renderPlayers.get(meId);
  if(me&&localPos){
   let nearest=null,best=Infinity;
@@ -51,7 +59,13 @@ function frame(now){
    ctx.fillStyle="rgba(248,113,113,.95)";ctx.shadowColor="rgba(248,113,113,.45)";ctx.shadowBlur=8;ctx.beginPath();ctx.moveTo(18,0);ctx.lineTo(-9,-10);ctx.lineTo(-3,0);ctx.lineTo(-9,10);ctx.closePath();ctx.fill();ctx.restore();
   }
  }
- for(const p of renderPlayers.values()){const isMe=p.id===meId;if(isMe&&localPos){p.rx=localPos.x;p.ry=localPos.y}else{const smooth=1-Math.exp(-12*dt);p.rx+=(p.tx-p.rx)*smooth;p.ry+=(p.ty-p.ry)*smooth}if(p.invisible&&!isMe)continue;if(p.rx<leftX-40||p.rx>rightX+40||p.ry<topY-40||p.ry>bottomY+40)continue;ctx.save();ctx.translate(p.rx,p.ry);ctx.rotate(p.angle);ctx.globalAlpha=p.hp>0?1:.45;ctx.fillStyle=isMe?"#60a5fa":"#c084fc";ctx.beginPath();ctx.arc(0,0,16,0,Math.PI*2);ctx.fill();ctx.fillStyle="#f8fafc";ctx.fillRect(8,-4,20,8);ctx.restore();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font="12px system-ui";ctx.textAlign="center";ctx.fillText(p.name,p.rx,p.ry-24);ctx.fillStyle="#22c55e";ctx.fillRect(p.rx-20,p.ry+20,40*Math.max(0,p.hp/100),4)}
+ for(const p of renderPlayers.values()){const isMe=p.id===meId;if(isMe&&localPos){p.rx=localPos.x;p.ry=localPos.y}else{const smooth=1-Math.exp(-12*dt);p.rx+=(p.tx-p.rx)*smooth;p.ry+=(p.ty-p.ry)*smooth}if(p.invisible&&!isMe)continue;if(p.rx<leftX-40||p.rx>rightX+40||p.ry<topY-40||p.ry>bottomY+40)continue;ctx.save();ctx.translate(p.rx,p.ry);ctx.globalAlpha=p.hp>0?1:.45;
+ // soft ground shadow
+ ctx.fillStyle="rgba(0,0,0,.38)";ctx.beginPath();ctx.ellipse(0,13,19,8,0,0,Math.PI*2);ctx.fill();
+ // raised character body
+ ctx.fillStyle=isMe?"#2563eb":"#9333ea";ctx.beginPath();ctx.ellipse(0,5,16,13,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=isMe?"#60a5fa":"#c084fc";ctx.beginPath();ctx.arc(0,-3,15,0,Math.PI*2);ctx.fill();
+ ctx.rotate(p.angle);ctx.fillStyle="#f8fafc";ctx.fillRect(8,-4,20,8);ctx.restore();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font="12px system-ui";ctx.textAlign="center";ctx.fillText(p.name,p.rx,p.ry-24);ctx.fillStyle="#22c55e";ctx.fillRect(p.rx-20,p.ry+20,40*Math.max(0,p.hp/100),4)}
  ctx.restore();requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame);
