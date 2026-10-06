@@ -72,10 +72,9 @@ function frame(now){
  fpsFrames++;
  if(now-fpsLast>=500){displayFps=Math.round(fpsFrames*1000/(now-fpsLast));fpsFrames=0;fpsLast=now;perf.innerHTML='FPS: <b>'+displayFps+'</b> • Ping: <b>'+ping+'ms</b>'}
  const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;
- const p=renderPlayers.get(meId),speed=(p?.kit==="scout"?350:p?.kit==="tank"?270:p?.kit==="juggernaut"?250:p?.kit==="assassin"?380:p?.kit==="striker"?320:300);
+ const p=renderPlayers.get(meId),speed=(p?.kit==="scout"?350:p?.kit==="tank"?270:p?.kit==="juggernaut"?250:p?.kit==="assassin"?380:p?.kit==="striker"?320:300),powerLeft=p&&p.powerMs?Math.max(0,p.powerMs/1000):0;
  if(localPos){localPos.x+=inputState.x*speed*dt;localPos.y+=inputState.y*speed*dt;localPos.x=Math.max(18,Math.min(game.world.w-18,localPos.x));localPos.y=Math.max(18,Math.min(game.world.h-18,localPos.y));const correctionBlend=1-Math.exp(-16*dt);localPos.x+=correction.x*correctionBlend;localPos.y+=correction.y*correctionBlend;correction.x*=1-correctionBlend;correction.y*=1-correctionBlend}
  const follow=1-Math.exp(-18*dt),w=viewW,h=viewH;if(localPos){camera.x+=(localPos.x-camera.x)*follow;camera.y+=(localPos.y-camera.y)*follow}
- const p=renderPlayers.get(meId),powerLeft=p&&p.powerMs?Math.max(0,p.powerMs/1000):0;
  updateHeader();
  const streak=p?.streak||0;
  if(streak>=3){streakhud.style.display="block";streakhud.textContent=streak+" KILL STREAK";}else{streakhud.style.display="none";}powerhud.style.display=powerLeft?"block":"none";if(powerLeft)powerhud.textContent="PHASE POWER: "+powerLeft.toFixed(1)+"s";
