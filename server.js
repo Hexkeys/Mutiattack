@@ -28,6 +28,7 @@ const blocked=(x,y,r=16)=>obstacles.some(o=>circleHitsRect(x,y,r,o));
 const spawn=()=>{for(let i=0;i<100;i++){const x=40+Math.random()*(WORLD.w-80),y=40+Math.random()*(WORLD.h-80);if(!blocked(x,y))return{x,y}}return{x:60,y:60}};
 const powerSpawn=()=>{for(let i=0;i<100;i++){const x=80+Math.random()*(WORLD.w-160),y=80+Math.random()*(WORLD.h-160);if(!blocked(x,y))return{x,y}}return{x:1200,y:700}};
 const makeRoom=()=>({players:new Map(),bullets:new Map(),powerups:new Map(),stateTimer:0,powerTimer:POWERUP_RESPAWN});
+const announce=(roomId,text,type="info")=>{const r=rooms.get(roomId);if(!r)return;io.to(roomId).emit("announcement",{id:randomUUID(),text,type});};
 
 function sendState(socket,r,me){
  const p=r.players.get(me);if(!p)return;
@@ -54,7 +55,7 @@ io.on("connection",socket=>{
   const selected=guns[gun]?gun:"pistol";
   r.players.set(socket.id,{id:socket.id,name:String(name).slice(0,20)||"Player",x:pos.x,y:pos.y,angle:0,hp:100,gun:selected,input:{x:0,y:0},lastShot:0,powerUntil:0});
   if(r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});}
-  socket.emit("joined",{roomId:roomName,id:socket.id});broadcast(roomName);
+  socket.emit("joined",{roomId:roomName,id:socket.id});announce(roomName,(String(name).slice(0,20)||"Player")+" joined the game","join");broadcast(roomName);
  });
  socket.on("selectGun",({gun}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(p&&guns[gun])p.gun=gun});
  socket.on("playerInput",({x=0,y=0,angle=0}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;p.input.x=clamp(Number(x)||0,-1,1);p.input.y=clamp(Number(y)||0,-1,1);if(Number.isFinite(angle))p.angle=angle});
@@ -65,7 +66,7 @@ io.on("connection",socket=>{
   for(let i=0;i<g.pellets;i++){const a=angle+(Math.random()-.5)*g.spread,vx=Math.cos(a)*g.speed,vy=Math.sin(a)*g.speed,id=randomUUID();r.bullets.set(id,{id,owner:socket.id,x:p.x+Math.cos(a)*20,y:p.y+Math.sin(a)*20,vx,vy,life:0,damage:g.damage,color:empowered?"#a78bfa":g.color,bounce:empowered?3:0,penetration:empowered?0:g.penetration,wallDamage:g.wallDamage})}
  });
  socket.on("disconnect",()=>{
-  const id=socket.data.roomId,r=rooms.get(id);if(!r)return;r.players.delete(socket.id);
+  const id=socket.data.roomId,r=rooms.get(id);if(!r)return;const leaving=r.players.get(socket.id);r.players.delete(socket.id);if(leaving)announce(id,leaving.name+" left the game","leave");
   for(const[k,b]of r.bullets)if(b.owner===socket.id)r.bullets.delete(k);
   if(!r.players.size)rooms.delete(id);else broadcast(id);
  });
@@ -86,10 +87,10 @@ const tickServer=()=>{
    }
    if(b.life>2.2||b.x<0||b.x>WORLD.w||b.y<0||b.y>WORLD.h){r.bullets.delete(k);continue}
    let hit=false;
-   for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){p.hp=Math.max(0,p.hp-b.damage);if(p.hp===0)setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn();q.x=pos.x;q.y=pos.y;q.hp=100;q.powerUntil=0}},700)}r.bullets.delete(k);hit=true;break}}
+   for(const p of r.players.values()){if(p.id===b.owner||p.hp<=0)continue;if(Math.hypot(b.x-p.x,b.y-p.y)<20){if(p.powerUntil<=now){p.hp=Math.max(0,p.hp-b.damage);if(p.hp===0){const victim=p.name,killer=r.players.get(b.owner)?.name;announce(id,killer&&killer!==victim?killer+" eliminated "+victim:victim+" died","death");setTimeout(()=>{const q=rooms.get(id)?.players.get(p.id);if(q){const pos=spawn();q.x=pos.x;q.y=pos.y;q.hp=100;q.powerUntil=0;announce(id,q.name+" respawned","respawn")}},700)}}r.bullets.delete(k);hit=true;break}}
    if(hit)continue;
   }
-  for(const p of r.players.values()){if(p.hp<=0||p.powerUntil>now)continue;for(const[k,u]of r.powerups){if(Math.hypot(p.x-u.x,p.y-u.y)<28){p.powerUntil=now+POWERUP_DURATION*1000;r.powerups.delete(k);break}}}
+  for(const p of r.players.values()){if(p.hp<=0||p.powerUntil>now)continue;for(const[k,u]of r.powerups){if(Math.hypot(p.x-u.x,p.y-u.y)<28){p.powerUntil=now+POWERUP_DURATION*1000;r.powerups.delete(k);announce(id,p.name+" got the Phase Power-Up","power");break}}}
   r.powerTimer-=dt;if(r.powerTimer<=0&&r.powerups.size===0){const u=powerSpawn(),powerId=randomUUID();r.powerups.set(powerId,{id:powerId,x:u.x,y:u.y,type:"phase"});r.powerTimer=POWERUP_RESPAWN}
   r.stateTimer+=dt;if(r.stateTimer>=.05){r.stateTimer-=.05;broadcast(id)}
  }
