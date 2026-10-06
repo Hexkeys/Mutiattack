@@ -31,9 +31,9 @@ const makeRoom=()=>({players:new Map(),bullets:new Map(),powerups:new Map(),stat
 
 function sendState(socket,r,me){
  const p=r.players.get(me);if(!p)return;
- const rr=INTEREST_RADIUS*INTEREST_RADIUS;
+ const rr=INTEREST_RADIUS*INTEREST_RADIUS,now=performance.now();
  const players=[...r.players.values()].filter(q=>q.id===me||((q.x-p.x)**2+(q.y-p.y)**2)<=rr)
-  .map(q=>({id:q.id,name:q.name,x:q.x,y:q.y,angle:q.angle,hp:q.hp,gun:q.gun,invisible:q.powerUntil>performance.now()}));
+  .map(q=>({id:q.id,name:q.name,x:q.x,y:q.y,angle:q.angle,hp:q.hp,gun:q.gun,invisible:q.powerUntil>now,powerMs:Math.max(0,q.powerUntil-now)}));
  const bullets=[...r.bullets.values()].filter(b=>((b.x-p.x)**2+(b.y-p.y)**2)<=rr)
   .map(b=>({id:b.id,x:b.x,y:b.y,color:b.color,bounce:b.bounce}));
  const nearbyObstacles=obstacles.filter(o=>{const x=clamp(p.x,o.x,o.x+o.w),y=clamp(p.y,o.y,o.y+o.h);return (x-p.x)**2+(y-p.y)**2<=rr});
