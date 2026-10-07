@@ -37,8 +37,50 @@ addEventListener("blur",()=>{keys.clear();moveStick={x:0,y:0};aimStick={x:0,y:0}
 canvas.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const rect=canvas.getBoundingClientRect();mouseAim={x:e.clientX-rect.left,y:e.clientY-rect.top};if(localPos){mouseAimActive=true;const worldX=mouseAim.x-viewW/2+camera.x,worldY=mouseAim.y-viewH/2+camera.y;inputState.angle=getAimAngle(Math.atan2(worldY-localPos.y,worldX-localPos.x))}});
 canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"){mouseDown=true;canvas.setPointerCapture(e.pointerId);e.preventDefault()}});
 canvas.addEventListener("pointerup",e=>{if(e.pointerType==="mouse"){mouseDown=false}});canvas.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"){mouseAimActive=false;mouseDown=false}});
-function stick(el,type){let activeId=null;function setPoint(p){const r=el.getBoundingClientRect();let x=p.clientX-(r.left+r.width/2),y=p.clientY-(r.top+r.height/2),d=Math.hypot(x,y);if(d>55){x=x/d*55;y=y/d*55}el.querySelector(".knob").style.transform=`translate(${x}px,${y}px)`;if(type==="move"){moveStick={x:x/55,y:y/55}}else{aimStick={x:x/55,y:y/55};aimActive=true}sendInputNow()}el.addEventListener("pointerdown",e=>{if(activeId!==null)return;activeId=e.pointerId;if(type==="aim")aimActive=true;el.setPointerCapture(e.pointerId);setPoint(e);e.preventDefault()},{passive:false});el.addEventListener("pointermove",e=>{if(e.pointerId===activeId){setPoint(e);e.preventDefault()}},{passive:false});function end(e){if(e.pointerId!==activeId)return;activeId=null;el.querySelector(".knob").style.transform="";if(type==="move"){moveStick={x:0,y:0};sendInputNow()}else{aimStick={x:0,y:0};aimActive=false;sendInputNow()}}el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end)}
-function sendInputNow(){if(!meId||!socket?.connected)return;const p=game.players.find(q=>q.id===meId),angleBase=p?.angle||inputState.angle||0;let angle=angleBase;if(Math.hypot(aimStick.x,aimStick.y)>.15)angle=Math.atan2(aimStick.y,aimStick.x);else if(mouseAimActive&&localPos)angle=Math.atan2(mouseAim.y-viewH/2+camera.y-localPos.y,mouseAim.x-viewW/2+camera.x-localPos.x);const assistedAngle=getAimAngle(angle);inputState.angle=assistedAngle;socket.emit("playerInput",inputState)}
+function applyStickPoint(el,type,p){
+ const r=el.getBoundingClientRect();
+ let x=p.clientX-(r.left+r.width/2),y=p.clientY-(r.top+r.height/2),d=Math.hypot(x,y);
+ if(d>55){x=x/d*55;y=y/d*55}
+ el.querySelector(".knob").style.transform="translate("+x+"px,"+y+"px)";
+ if(type==="move"){moveStick={x:x/55,y:y/55};inputState.x=moveStick.x;inputState.y=moveStick.y}
+ else{aimStick={x:x/55,y:y/55};aimActive=true}
+ sendInputNow()
+}
+const stickPointers=new Map();
+function stick(el,type){
+ el.addEventListener("pointerdown",e=>{
+  if(e.pointerType==="mouse")return;
+  e.preventDefault();
+  if(stickPointers.has(type))return;
+  stickPointers.set(type,e.pointerId);
+  applyStickPoint(el,type,e);
+ },{passive:false});
+ window.addEventListener("pointermove",e=>{
+  if(e.pointerType==="mouse")return;
+  if(stickPointers.get(type)!==e.pointerId)return;
+  e.preventDefault();
+  applyStickPoint(el,type,e);
+ },{passive:false});
+ const end=e=>{
+  if(stickPointers.get(type)!==e.pointerId)return;
+  stickPointers.delete(type);
+  el.querySelector(".knob").style.transform="";
+  if(type==="move"){moveStick={x:0,y:0};inputState.x=0;inputState.y=0;sendInputNow()}
+  else{aimStick={x:0,y:0};aimActive=false;sendInputNow()}
+ };
+ window.addEventListener("pointerup",end);
+ window.addEventListener("pointercancel",end);
+}
+function sendInputNow(){
+ if(!meId||!socket?.connected)return;
+ const p=game.players.find(q=>q.id===meId),angleBase=p?.angle||inputState.angle||0;
+ let angle=angleBase;
+ if(Math.hypot(aimStick.x,aimStick.y)>.15)angle=Math.atan2(aimStick.y,aimStick.x);
+ else if(mouseAimActive&&localPos)angle=Math.atan2(mouseAim.y-viewH/2+camera.y-localPos.y,mouseAim.x-viewW/2+camera.x-localPos.x);
+ const assistedAngle=getAimAngle(angle);
+ inputState.angle=assistedAngle;
+ socket.emit("playerInput",{x:inputState.x,y:inputState.y,angle:assistedAngle})
+}
 stick(left,"move");stick(right,"aim");
 
 function getAimAngle(baseAngle){
@@ -78,7 +120,7 @@ function frame(now){
  if(now-fpsLast>=500){displayFps=Math.round(fpsFrames*1000/(now-fpsLast));fpsFrames=0;fpsLast=now;perf.innerHTML='FPS: <b>'+displayFps+'</b> • Ping: <b>'+ping+'ms</b>'}
  const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;
  const p=renderPlayers.get(meId),speed=(p?.kit==="scout"?350:p?.kit==="tank"?270:p?.kit==="juggernaut"?250:p?.kit==="assassin"?380:p?.kit==="striker"?320:300),powerLeft=p&&p.powerMs?Math.max(0,p.powerMs/1000):0;
- if(localPos){localPos.x+=inputState.x*speed*dt;localPos.y+=inputState.y*speed*dt;localPos.x=Math.max(18,Math.min(game.world.w-18,localPos.x));localPos.y=Math.max(18,Math.min(game.world.h-18,localPos.y));const correctionBlend=1-Math.exp(-14*dt);localPos.x+=correction.x*correctionBlend;localPos.y+=correction.y*correctionBlend;correction.x*=1-correctionBlend;correction.y*=1-correctionBlend}
+ if(localPos){let moveX=moveStick.x,moveY=moveStick.y;if(keys.has("a")||keys.has("arrowleft"))moveX-=1;if(keys.has("d")||keys.has("arrowright"))moveX+=1;if(keys.has("w")||keys.has("arrowup"))moveY-=1;if(keys.has("s")||keys.has("arrowdown"))moveY+=1;const moveLen=Math.hypot(moveX,moveY);if(moveLen>1){moveX/=moveLen;moveY/=moveLen}localPos.x+=moveX*speed*dt;localPos.y+=moveY*speed*dt;localPos.x=Math.max(18,Math.min(game.world.w-18,localPos.x));localPos.y=Math.max(18,Math.min(game.world.h-18,localPos.y));const correctionBlend=1-Math.exp(-14*dt);localPos.x+=correction.x*correctionBlend;localPos.y+=correction.y*correctionBlend;correction.x*=1-correctionBlend;correction.y*=1-correctionBlend}
  const follow=1-Math.exp(-18*dt),w=viewW,h=viewH;if(localPos){camera.x+=(localPos.x-camera.x)*follow;camera.y+=(localPos.y-camera.y)*follow}
  updateHeader();
  const streak=p?.streak||0;
