@@ -46,30 +46,63 @@ function applyStickPoint(el,type,p){
  else{aimStick={x:x/55,y:y/55};aimActive=true}
  sendInputNow()
 }
-const stickPointers=new Map();
+const touchIds={move:null,aim:null};
+function resetTouch(type){
+ const el=type==="move"?left:right;
+ el.querySelector(".knob").style.transform="";
+ if(type==="move"){moveStick={x:0,y:0};inputState.x=0;inputState.y=0}
+ else{aimStick={x:0,y:0};aimActive=false}
+ sendInputNow()
+}
+function touchTypeForPoint(t){
+ const mid=innerWidth/2;
+ return t.clientX<mid&&touchIds.move===null?"move":t.clientX>=mid&&touchIds.aim===null?"aim":null;
+}
+function handleTouchStart(e){
+ if(lobby.style.display!=="none")return;
+ e.preventDefault();
+ for(const t of e.changedTouches){
+  const type=touchTypeForPoint(t);
+  if(!type)continue;
+  touchIds[type]=t.identifier;
+  applyStickPoint(type==="move"?left:right,type,t);
+ }
+}
+function handleTouchMove(e){
+ if(lobby.style.display!=="none")return;
+ e.preventDefault();
+ for(const t of e.changedTouches){
+  if(t.identifier===touchIds.move)applyStickPoint(left,"move",t);
+  else if(t.identifier===touchIds.aim)applyStickPoint(right,"aim",t);
+ }
+}
+function handleTouchEnd(e){
+ if(lobby.style.display!=="none")return;
+ e.preventDefault();
+ for(const t of e.changedTouches){
+  if(t.identifier===touchIds.move){touchIds.move=null;resetTouch("move");}
+  else if(t.identifier===touchIds.aim){touchIds.aim=null;resetTouch("aim");}
+ }
+}
+document.addEventListener("touchstart",handleTouchStart,{passive:false});
+document.addEventListener("touchmove",handleTouchMove,{passive:false});
+document.addEventListener("touchend",handleTouchEnd,{passive:false});
+document.addEventListener("touchcancel",handleTouchEnd,{passive:false});
 function stick(el,type){
  el.addEventListener("pointerdown",e=>{
-  if(e.pointerType==="mouse")return;
-  e.preventDefault();
-  if(stickPointers.has(type))return;
-  stickPointers.set(type,e.pointerId);
-  applyStickPoint(el,type,e);
- },{passive:false});
- window.addEventListener("pointermove",e=>{
-  if(e.pointerType==="mouse")return;
-  if(stickPointers.get(type)!==e.pointerId)return;
+  if(e.pointerType==="touch")return;
   e.preventDefault();
   applyStickPoint(el,type,e);
- },{passive:false});
- const end=e=>{
-  if(stickPointers.get(type)!==e.pointerId)return;
-  stickPointers.delete(type);
-  el.querySelector(".knob").style.transform="";
-  if(type==="move"){moveStick={x:0,y:0};inputState.x=0;inputState.y=0;sendInputNow()}
-  else{aimStick={x:0,y:0};aimActive=false;sendInputNow()}
- };
- window.addEventListener("pointerup",end);
- window.addEventListener("pointercancel",end);
+ });
+ el.addEventListener("pointermove",e=>{
+  if(e.pointerType==="touch")return;
+  e.preventDefault();
+  applyStickPoint(el,type,e);
+ });
+ el.addEventListener("pointerup",e=>{
+  if(e.pointerType==="touch")return;
+  resetTouch(type);
+ });
 }
 function sendInputNow(){
  if(!meId||!socket?.connected)return;
@@ -79,7 +112,7 @@ function sendInputNow(){
  else if(mouseAimActive&&localPos)angle=Math.atan2(mouseAim.y-viewH/2+camera.y-localPos.y,mouseAim.x-viewW/2+camera.x-localPos.x);
  const assistedAngle=getAimAngle(angle);
  inputState.angle=assistedAngle;
- socket.emit("playerInput",{x:inputState.x,y:inputState.y,angle:assistedAngle})
+ socket.emit("playerInput",{x:moveStick.x,y:moveStick.y,angle:assistedAngle});
 }
 stick(left,"move");stick(right,"aim");
 
