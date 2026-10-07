@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Mutiattack — Multiplayer 2D Shooter</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,sans-serif;background:#080b14;color:#fff}body{display:flex;flex-direction:column}.top{height:46px;display:flex;align-items:center;padding:6px 10px;background:#111827;z-index:2}.top h1{font-size:17px;margin:0}.topmeta{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12px}.load{opacity:.7}.top input,.top #join{display:none}input,button,select{border:0;border-radius:8px;padding:9px 11px;background:#1f2937;color:#fff}button{background:#2563eb;font-weight:700}.wrap{position:relative;flex:1;min-height:0;overflow:hidden}canvas{width:100%;height:100%;display:block;background:#0d1420;touch-action:none}#arena{position:absolute;inset:0}.perf{position:absolute;left:12px;top:46px;z-index:2;padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.45);font-size:11px;color:#cbd5e1;pointer-events:none}.perf b{color:#fff}.hud{position:absolute;left:12px;top:12px;z-index:2;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.45);font-size:13px}.announcements{position:absolute;left:50%;top:54px;transform:translateX(-50%);z-index:4;width:min(420px,calc(100vw - 24px));display:flex;flex-direction:column;gap:6px;pointer-events:none;align-items:center}.announcement{padding:7px 12px;border-radius:999px;background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 22px rgba(0,0,0,.28);font-size:13px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;animation:announceIn .18s ease-out}.announcement.power{border-color:rgba(192,132,252,.55);color:#e9d5ff}.announcement.death{border-color:rgba(248,113,113,.55);color:#fecaca}.announcement.join,.announcement.respawn{border-color:rgba(96,165,250,.45);color:#dbeafe}.announcement.leave{border-color:rgba(148,163,184,.45);color:#cbd5e1}@keyframes announceIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}.kit{padding:6px 8px;font-size:11px;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.14)}.kit.active{outline:2px solid #a78bfa;background:#581c87}.streakhud{position:absolute;left:50%;top:92px;transform:translateX(-50%);z-index:3;padding:6px 12px;border-radius:999px;background:rgba(127,29,29,.78);font-weight:800;font-size:12px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}.powerhud{position:absolute;right:12px;top:12px;z-index:2;padding:7px 10px;border-radius:10px;background:rgba(88,28,135,.72);font-size:13px;display:none}.exit{position:absolute;right:12px;bottom:12px;z-index:6;background:rgba(127,29,29,.9);padding:9px 14px}.gun{padding:8px 10px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.9)}.gun.active{outline:2px solid #60a5fa;background:#1e40af}.hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:7px 12px;border-radius:999px;background:rgba(0,0,0,.45);font-size:12px;pointer-events:none;z-index:2}#leftStick,#rightStick{position:absolute;bottom:28px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.2);touch-action:none;display:none;z-index:3}#leftStick{left:28px}#rightStick{right:28px}.knob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px;border-radius:50%;background:rgba(96,165,250,.65);border:2px solid rgba(255,255,255,.7)}#rightStick .knob{background:rgba(248,113,113,.7)}#lobby{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,7,18,.5);backdrop-filter:blur(12px);z-index:5}.card{width:min(390px,90vw);padding:28px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:rgba(15,23,42,.92);box-shadow:0 20px 70px rgba(0,0,0,.45);text-align:center}.card h2{margin:0 0 8px;font-size:30px}.card p{margin:0 0 18px;color:#94a3b8}.card input,.card select{width:100%;margin-bottom:10px}.play{width:100%;font-size:18px;padding:13px;border-radius:12px}@media(pointer:coarse){#leftStick,#rightStick{display:block}.top{height:42px}.top h1{display:none}.hint{top:auto;bottom:8px}.exit{bottom:185px}}@media(max-width:600px){}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;touch-action:none;font-family:system-ui,sans-serif;background:#080b14;color:#fff}body{display:flex;flex-direction:column}.top{height:46px;display:flex;align-items:center;padding:6px 10px;background:#111827;z-index:2}.top h1{font-size:17px;margin:0}.topmeta{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12px}.load{opacity:.7}.top input,.top #join{display:none}input,button,select{border:0;border-radius:8px;padding:9px 11px;background:#1f2937;color:#fff}button{background:#2563eb;font-weight:700}.wrap{position:relative;flex:1;min-height:0;overflow:hidden}canvas{width:100%;height:100%;display:block;background:#0d1420;touch-action:none}#arena{position:absolute;inset:0}.perf{position:absolute;left:12px;top:46px;z-index:2;padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.45);font-size:11px;color:#cbd5e1;pointer-events:none}.perf b{color:#fff}.hud{position:absolute;left:12px;top:12px;z-index:2;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.45);font-size:13px}.announcements{position:absolute;left:50%;top:54px;transform:translateX(-50%);z-index:4;width:min(420px,calc(100vw - 24px));display:flex;flex-direction:column;gap:6px;pointer-events:none;align-items:center}.announcement{padding:7px 12px;border-radius:999px;background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 22px rgba(0,0,0,.28);font-size:13px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;animation:announceIn .18s ease-out}.announcement.power{border-color:rgba(192,132,252,.55);color:#e9d5ff}.announcement.death{border-color:rgba(248,113,113,.55);color:#fecaca}.announcement.join,.announcement.respawn{border-color:rgba(96,165,250,.45);color:#dbeafe}.announcement.leave{border-color:rgba(148,163,184,.45);color:#cbd5e1}@keyframes announceIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}.kit{padding:6px 8px;font-size:11px;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.14)}.kit.active{outline:2px solid #a78bfa;background:#581c87}.streakhud{position:absolute;left:50%;top:92px;transform:translateX(-50%);z-index:3;padding:6px 12px;border-radius:999px;background:rgba(127,29,29,.78);font-weight:800;font-size:12px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}.powerhud{position:absolute;right:12px;top:12px;z-index:2;padding:7px 10px;border-radius:10px;background:rgba(88,28,135,.72);font-size:13px;display:none}.exit{position:absolute;right:12px;bottom:12px;z-index:6;background:rgba(127,29,29,.9);padding:9px 14px}.gun{padding:8px 10px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.9)}.gun.active{outline:2px solid #60a5fa;background:#1e40af}.hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:7px 12px;border-radius:999px;background:rgba(0,0,0,.45);font-size:12px;pointer-events:none;z-index:2}#leftStick,#rightStick{position:absolute;bottom:28px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.2);touch-action:none;display:none;z-index:3}#leftStick{left:28px}#rightStick{right:28px}.knob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px;border-radius:50%;background:rgba(96,165,250,.65);border:2px solid rgba(255,255,255,.7)}#rightStick .knob{background:rgba(248,113,113,.7)}#lobby{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,7,18,.5);backdrop-filter:blur(12px);z-index:5}.card{width:min(390px,90vw);padding:28px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:rgba(15,23,42,.92);box-shadow:0 20px 70px rgba(0,0,0,.45);text-align:center}.card h2{margin:0 0 8px;font-size:30px}.card p{margin:0 0 18px;color:#94a3b8}.card input,.card select{width:100%;margin-bottom:10px}.play{width:100%;font-size:18px;padding:13px;border-radius:12px}@media(pointer:coarse){#leftStick,#rightStick{display:block}.top{height:42px}.top h1{display:none}.hint{top:auto;bottom:8px}.exit{bottom:185px}}@media(max-width:600px){}
 </style></head><body>
 <div class="top"><h1>Mutiattack</h1><div class="topmeta"><span id="load" class="load">Connecting…</span><span id="build">Kit: Striker • Gun: Pistol</span></div></div>
 <div class="wrap"><div id="arena"><canvas id="game"></canvas></div><div class="hud" id="hud">Gun: Pistol</div><div class="perf" id="perf">FPS: <b>--</b> • Ping: <b>--</b></div><div class="streakhud" id="streakhud"></div><div class="powerhud" id="powerhud">PHASE POWER: 10.0s</div><div class="announcements" id="announcements"></div><button class="exit" id="exit">EXIT</button><div class="hint">Left: move • Right: aim & shoot</div><div id="leftStick"><div class="knob"></div></div><div id="rightStick"><div class="knob"></div></div>
@@ -37,73 +37,45 @@ addEventListener("blur",()=>{keys.clear();moveStick={x:0,y:0};aimStick={x:0,y:0}
 canvas.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const rect=canvas.getBoundingClientRect();mouseAim={x:e.clientX-rect.left,y:e.clientY-rect.top};if(localPos){mouseAimActive=true;const worldX=mouseAim.x-viewW/2+camera.x,worldY=mouseAim.y-viewH/2+camera.y;inputState.angle=getAimAngle(Math.atan2(worldY-localPos.y,worldX-localPos.x))}});
 canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"){mouseDown=true;canvas.setPointerCapture(e.pointerId);e.preventDefault()}});
 canvas.addEventListener("pointerup",e=>{if(e.pointerType==="mouse"){mouseDown=false}});canvas.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"){mouseAimActive=false;mouseDown=false}});
-function applyStickPoint(el,type,p){
+const activeJoysticks={move:null,aim:null};
+function updateJoystick(type,clientX,clientY){
+ const el=type==="move"?left:right;
  const r=el.getBoundingClientRect();
- let x=p.clientX-(r.left+r.width/2),y=p.clientY-(r.top+r.height/2),d=Math.hypot(x,y);
+ let x=clientX-(r.left+r.width/2),y=clientY-(r.top+r.height/2);
+ const d=Math.hypot(x,y);
  if(d>55){x=x/d*55;y=y/d*55}
  el.querySelector(".knob").style.transform="translate("+x+"px,"+y+"px)";
- if(type==="move"){moveStick={x:x/55,y:y/55};inputState.x=moveStick.x;inputState.y=moveStick.y}
- else{aimStick={x:x/55,y:y/55};aimActive=true}
- sendInputNow()
+ if(type==="move"){moveStick.x=x/55;moveStick.y=y/55;inputState.x=moveStick.x;inputState.y=moveStick.y}
+ else{aimStick.x=x/55;aimStick.y=y/55;aimActive=true}
 }
-const touchIds={move:null,aim:null};
-function resetTouch(type){
+function beginJoystick(type,e){
+ if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
+ if(lobby.style.display!=="none")return;
+ if(activeJoysticks[type]!==null)return;
+ e.preventDefault();
+ activeJoysticks[type]=e.pointerId;
+ try{(type==="move"?left:right).setPointerCapture(e.pointerId)}catch{}
+ updateJoystick(type,e.clientX,e.clientY);
+}
+function moveJoystick(type,e){
+ if(activeJoysticks[type]!==e.pointerId)return;
+ e.preventDefault();
+ updateJoystick(type,e.clientX,e.clientY);
+}
+function endJoystick(type,e){
+ if(activeJoysticks[type]!==e.pointerId)return;
+ activeJoysticks[type]=null;
  const el=type==="move"?left:right;
  el.querySelector(".knob").style.transform="";
  if(type==="move"){moveStick={x:0,y:0};inputState.x=0;inputState.y=0}
  else{aimStick={x:0,y:0};aimActive=false}
- sendInputNow()
+ sendInputNow();
 }
-function touchTypeForPoint(t){
- const mid=innerWidth/2;
- return t.clientX<mid&&touchIds.move===null?"move":t.clientX>=mid&&touchIds.aim===null?"aim":null;
-}
-function handleTouchStart(e){
- if(lobby.style.display!=="none")return;
- e.preventDefault();
- for(const t of e.changedTouches){
-  const type=touchTypeForPoint(t);
-  if(!type)continue;
-  touchIds[type]=t.identifier;
-  applyStickPoint(type==="move"?left:right,type,t);
- }
-}
-function handleTouchMove(e){
- if(lobby.style.display!=="none")return;
- e.preventDefault();
- for(const t of e.changedTouches){
-  if(t.identifier===touchIds.move)applyStickPoint(left,"move",t);
-  else if(t.identifier===touchIds.aim)applyStickPoint(right,"aim",t);
- }
-}
-function handleTouchEnd(e){
- if(lobby.style.display!=="none")return;
- e.preventDefault();
- for(const t of e.changedTouches){
-  if(t.identifier===touchIds.move){touchIds.move=null;resetTouch("move");}
-  else if(t.identifier===touchIds.aim){touchIds.aim=null;resetTouch("aim");}
- }
-}
-document.addEventListener("touchstart",handleTouchStart,{passive:false});
-document.addEventListener("touchmove",handleTouchMove,{passive:false});
-document.addEventListener("touchend",handleTouchEnd,{passive:false});
-document.addEventListener("touchcancel",handleTouchEnd,{passive:false});
-function stick(el,type){
- el.addEventListener("pointerdown",e=>{
-  if(e.pointerType==="touch")return;
-  e.preventDefault();
-  applyStickPoint(el,type,e);
- });
- el.addEventListener("pointermove",e=>{
-  if(e.pointerType==="touch")return;
-  e.preventDefault();
-  applyStickPoint(el,type,e);
- });
- el.addEventListener("pointerup",e=>{
-  if(e.pointerType==="touch")return;
-  resetTouch(type);
- });
-}
+left.addEventListener("pointerdown",e=>beginJoystick("move",e),{passive:false});
+right.addEventListener("pointerdown",e=>beginJoystick("aim",e),{passive:false});
+window.addEventListener("pointermove",e=>{moveJoystick("move",e);moveJoystick("aim",e)},{passive:false});
+window.addEventListener("pointerup",e=>{endJoystick("move",e);endJoystick("aim",e)});
+window.addEventListener("pointercancel",e=>{endJoystick("move",e);endJoystick("aim",e)});
 function sendInputNow(){
  if(!meId||!socket?.connected)return;
  const p=game.players.find(q=>q.id===meId),angleBase=p?.angle||inputState.angle||0;
@@ -114,7 +86,6 @@ function sendInputNow(){
  inputState.angle=assistedAngle;
  socket.emit("playerInput",{x:moveStick.x,y:moveStick.y,angle:assistedAngle});
 }
-stick(left,"move");stick(right,"aim");
 
 function getAimAngle(baseAngle){
  const me=renderPlayers.get(meId);
@@ -146,7 +117,7 @@ function getAimAngle(baseAngle){
  return baseAngle+delta*strength;
 }
 
-setInterval(()=>{if(!meId||!socket?.connected)return;let dx=moveStick.x,dy=moveStick.y;if(keys.has("a")||keys.has("arrowleft"))dx-=1;if(keys.has("d")||keys.has("arrowright"))dx+=1;if(keys.has("w")||keys.has("arrowup"))dy-=1;if(keys.has("s")||keys.has("arrowdown"))dy+=1;const len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len}const p=game.players.find(p=>p.id===meId),angleBase=p?.angle||inputState.angle||0;let angle=angleBase;if(Math.hypot(aimStick.x,aimStick.y)>.15)angle=Math.atan2(aimStick.y,aimStick.x);else if(mouseAimActive&&localPos)angle=Math.atan2(mouseAim.y-viewH/2+camera.y-localPos.y,mouseAim.x-viewW/2+camera.x-localPos.x);else if(keys.has(" ")||keys.has("enter"))angle=angleBase;const assistedAngle=getAimAngle(angle);inputState={x:dx,y:dy,angle:assistedAngle};socket.emit("playerInput",inputState);const now=performance.now(),gun=p?.gun||selectedGun||"pistol",rate=gun==="smg"?75:gun==="shotgun"?520:gun==="rifle"?360:220;if((aimActive||Math.hypot(aimStick.x,aimStick.y)>.15||mouseDown||keys.has(" ")||keys.has("enter"))&&now-lastShot>rate){socket.emit("shoot",{angle:assistedAngle});lastShot=now}},33);
+setInterval(()=>{if(!meId||!socket?.connected)return;let dx=moveStick.x,dy=moveStick.y;if(keys.has("a")||keys.has("arrowleft"))dx-=1;if(keys.has("d")||keys.has("arrowright"))dx+=1;if(keys.has("w")||keys.has("arrowup"))dy-=1;if(keys.has("s")||keys.has("arrowdown"))dy+=1;const len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len}const p=game.players.find(p=>p.id===meId),angleBase=p?.angle||inputState.angle||0;let angle=angleBase;if(Math.hypot(aimStick.x,aimStick.y)>.15)angle=Math.atan2(aimStick.y,aimStick.x);else if(mouseAimActive&&localPos)angle=Math.atan2(mouseAim.y-viewH/2+camera.y-localPos.y,mouseAim.x-viewW/2+camera.x-localPos.x);else if(keys.has(" ")||keys.has("enter"))angle=angleBase;const assistedAngle=getAimAngle(angle);inputState.x=dx;inputState.y=dy;inputState.angle=assistedAngle;socket.emit("playerInput",{x:dx,y:dy,angle:assistedAngle});const now=performance.now(),gun=p?.gun||selectedGun||"pistol",rate=gun==="smg"?75:gun==="shotgun"?520:gun==="rifle"?360:220;if((aimActive||Math.hypot(aimStick.x,aimStick.y)>.15||mouseDown||keys.has(" ")||keys.has("enter"))&&now-lastShot>rate){socket.emit("shoot",{angle:assistedAngle});lastShot=now}},33);
 
 function frame(now){
  fpsFrames++;
