@@ -47,7 +47,7 @@ function sendInputNow(){
  else if(mouseAimActive&&localPos)angle=Math.atan2(mouseAim.y-viewH/2+camera.y-localPos.y,mouseAim.x-viewW/2+camera.x-localPos.x);
  const assistedAngle=getAimAngle(angle);
  inputState.angle=assistedAngle;
- socket.emit("playerInput",{x:moveStick.x,y:moveStick.y,angle:assistedAngle});
+ 
 }
 
 function getAimAngle(baseAngle){
