@@ -48,7 +48,7 @@ function sendState(socket,r,me){
   .map(b=>({id:b.id,x:b.x,y:b.y,color:b.color,bounce:b.bounce}));
  const nearbyObstacles=obstacles.filter(o=>{const x=clamp(p.x,o.x,o.x+o.w),y=clamp(p.y,o.y,o.y+o.h);return (x-p.x)**2+(y-p.y)**2<=rr});
  const powerups=[...r.powerups.values()].filter(u=>((u.x-p.x)**2+(u.y-p.y)**2)<=rr).map(u=>({id:u.id,x:u.x,y:u.y,type:u.type}));
- socket.volatile.emit("state",{players,bullets,obstacles:nearbyObstacles,powerups,world:WORLD});
+ socket.emit("state",{players,bullets,obstacles:nearbyObstacles,powerups,world:WORLD});
 }
 function broadcast(id){const r=rooms.get(id);if(!r)return;for(const p of r.players.values()){const socket=io.sockets.sockets.get(p.id);if(socket)sendState(socket,r,p.id)}}
 
