@@ -37,60 +37,7 @@ addEventListener("blur",()=>{keys.clear();moveStick={x:0,y:0};aimStick={x:0,y:0}
 canvas.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const rect=canvas.getBoundingClientRect();mouseAim={x:e.clientX-rect.left,y:e.clientY-rect.top};if(localPos){mouseAimActive=true;const worldX=mouseAim.x-viewW/2+camera.x,worldY=mouseAim.y-viewH/2+camera.y;inputState.angle=getAimAngle(Math.atan2(worldY-localPos.y,worldX-localPos.x))}});
 canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"){mouseDown=true;canvas.setPointerCapture(e.pointerId);e.preventDefault()}});
 canvas.addEventListener("pointerup",e=>{if(e.pointerType==="mouse"){mouseDown=false}});canvas.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"){mouseAimActive=false;mouseDown=false}});
-const activeJoysticks={move:null,aim:null};
-function updateJoystick(type,clientX,clientY){
- const el=type==="move"?left:right;
- const r=el.getBoundingClientRect();
- let x=clientX-(r.left+r.width/2),y=clientY-(r.top+r.height/2);
- const d=Math.hypot(x,y);
- if(d>55){x=x/d*55;y=y/d*55}
- el.querySelector(".knob").style.transform="translate("+x+"px,"+y+"px)";
- if(type==="move"){moveStick={x:x/55,y:y/55};inputState.x=moveStick.x;inputState.y=moveStick.y}
- else{aimStick={x:x/55,y:y/55};aimActive=true}
- sendInputNow();
-}
-function resetJoystick(type){
- const el=type==="move"?left:right;
- el.querySelector(".knob").style.transform="";
- if(type==="move"){moveStick={x:0,y:0};inputState.x=0;inputState.y=0}
- else{aimStick={x:0,y:0};aimActive=false}
- sendInputNow();
-}
-function joystickSide(clientX){return clientX<innerWidth/2?"move":"aim"}
-function onGamePointerDown(e){
- if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
- if(lobby.style.display!=="none")return;
- const type=joystickSide(e.clientX);
- if(activeJoysticks[type]!==null)return;
- e.preventDefault();
- activeJoysticks[type]=e.pointerId;
- updateJoystick(type,e.clientX,e.clientY);
-}
-function onGamePointerMove(e){
- if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
- for(const type of ["move","aim"]){
-  if(activeJoysticks[type]===e.pointerId){e.preventDefault();updateJoystick(type,e.clientX,e.clientY);return}
- }
-}
-function onGamePointerEnd(e){
- if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
- for(const type of ["move","aim"]){
-  if(activeJoysticks[type]===e.pointerId){activeJoysticks[type]=null;resetJoystick(type);return}
- }
-}
-document.addEventListener("pointerdown",onGamePointerDown,{capture:true,passive:false});
-document.addEventListener("pointermove",onGamePointerMove,{capture:true,passive:false});
-document.addEventListener("pointerup",onGamePointerEnd,{capture:true,passive:false});
-document.addEventListener("pointercancel",onGamePointerEnd,{capture:true,passive:false});
-
-// Mouse fallback for testing the same controls on desktop/touch emulation.
-let mouseJoystick=null;
-document.addEventListener("mousedown",e=>{
- if(e.button!==0||lobby.style.display!=="none")return;
- const type=joystickSide(e.clientX);mouseJoystick=type;updateJoystick(type,e.clientX,e.clientY);
-});
-document.addEventListener("mousemove",e=>{if(mouseJoystick)updateJoystick(mouseJoystick,e.clientX,e.clientY)});
-document.addEventListener("mouseup",()=>{if(mouseJoystick){const t=mouseJoystick;mouseJoystick=null;resetJoystick(t)}});
+function stick(el,type){let activeId=null;function setPoint(p){const r=el.getBoundingClientRect();let x=p.clientX-(r.left+r.width/2),y=p.clientY-(r.top+r.height/2),d=Math.hypot(x,y);if(d>55){x=x/d*55;y=y/d*55}el.querySelector(".knob").style.transform="translate("+x+"px,"+y+"px)";if(type==="move")moveStick={x:x/55,y:y/55};else aimStick={x:x/55,y:y/55}}el.addEventListener("pointerdown",e=>{if(activeId!==null)return;activeId=e.pointerId;el.setPointerCapture(e.pointerId);setPoint(e);e.preventDefault()},{passive:false});el.addEventListener("pointermove",e=>{if(e.pointerId===activeId){setPoint(e);e.preventDefault()}},{passive:false});function end(e){if(e.pointerId!==activeId)return;activeId=null;el.querySelector(".knob").style.transform="";if(type==="move")moveStick={x:0,y:0};else aimStick={x:0,y:0}}el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);el.addEventListener("lostpointercapture",()=>{activeId=null})}stick(left,"move");stick(right,"aim");
 
 function sendInputNow(){
  if(!meId||!socket?.connected)return;
