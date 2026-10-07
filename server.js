@@ -74,7 +74,19 @@ io.on("connection",socket=>{
  });
  // Kit and gun are locked for the whole match. They can only be chosen when joining.
 
- socket.on("playerInput",({x=0,y=0,angle=0}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;p.input.x=clamp(Number(x)||0,-1,1);p.input.y=clamp(Number(y)||0,-1,1);if(Number.isFinite(angle))p.angle=angle});
+ function movePlayerTo(p,x,y){
+ const nx=clamp(Number(x)||p.x,18,WORLD.w-18);
+ const ny=clamp(Number(y)||p.y,18,WORLD.h-18);
+ if(!blocked(nx,p.y))p.x=nx;
+ if(!blocked(p.x,ny))p.y=ny;
+}
+socket.on("playerMove",({x,y,angle=0}={})=>{
+ const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;
+ movePlayerTo(p,x,y);
+ if(Number.isFinite(angle))p.angle=angle;
+ p.input.x=0;p.input.y=0;
+});
+socket.on("playerInput",({x=0,y=0,angle=0}={})=>{const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!p)return;if(Number.isFinite(angle))p.angle=angle;p.input.x=0;p.input.y=0});
  socket.on("shoot",({angle=0}={})=>{
   const r=rooms.get(socket.data.roomId),p=r?.players.get(socket.id);if(!r||!p||p.hp<=0||!Number.isFinite(angle))return;
   const g=guns[p.gun],now=Date.now();if(now-p.lastShot<g.fireRate)return;p.lastShot=now;
